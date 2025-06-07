@@ -1,4 +1,6 @@
-# tecs
+# tECS
+
+An experimental ECS implementation that focuses on logics, event-driven by a state-machine, reactive queries. 
 
 ### References
 
