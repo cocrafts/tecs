@@ -49,6 +49,8 @@ export default class ECS<
 
   private commands: Commands<Command> = {} as Commands<Command>;
 
+  public query = createQuery<ComponentMap, 'readonly'>(this.entities);
+
   constructor(initialState: GlobalState) {
     this.globalState = proxify(structuredClone(initialState), {
       isMutable: () => this.isMutable,
@@ -63,6 +65,19 @@ export default class ECS<
     registerRunner('normal_system', this.runNormalSystem);
     registerRunner('settled_system', this.runSettledSystem);
     registerRunner('end', this.runEnd);
+  }
+
+  /** Commands should only be called inside ECS, use with caution */
+  public get unsafeCommands() {
+    return this.commands;
+  }
+
+  private get readonlyContext(): ReadonlyContext {
+    return { global: this.globalState, ...this.query, ...this.commands } as ReadonlyContext;
+  }
+
+  private get mutableContext(): MutableContext {
+    return { global: this.globalState, ...this.query, ...this.commands } as MutableContext;
   }
 
   public start() {
@@ -80,9 +95,9 @@ export default class ECS<
     this.entities.push(entity);
   }
 
-  public addAction<T extends Action>(
-    type: T['type'],
-    handle: ActionFn<ReadonlyContext, Action, T['type']>,
+  public addAction<T extends Action['type']>(
+    type: T,
+    handle: ActionFn<ReadonlyContext, Action, T>,
   ) {
     this.actionMap[type] = handle;
   }
@@ -123,10 +138,6 @@ export default class ECS<
     if (this.stateMachine.current !== 'wait_action') throw TECSError.notWaitForActionToPushAction();
     this.pendingAction = action;
     this.stateMachine.transition<'wait_action'>('handle');
-  }
-
-  protected query(entityId: number) {
-    return this.entities[entityId];
   }
 
   protected runSystem(
@@ -182,22 +193,12 @@ export default class ECS<
 
   private entityNotifier = (entityId: number) => {
     const notify: ProxyNotify = (mutation, path) => {
-      console.log('Entity Proxy', { entityId, mutation, path });
+      console.debug(`-> Entity(${entityId}) ${mutation} ${path.join('.')}`);
     };
     return notify;
   };
 
   private notifyGlobalState: ProxyNotify = (mutation, path) => {
-    console.log('Global State Proxy', { mutation, path });
+    console.debug(`-> GlobalState ${mutation} ${path.join('.')}`);
   };
-
-  get readonlyContext(): ReadonlyContext {
-    const { globalState, entities, commands } = this;
-    return { global: globalState, ...createQuery(entities), ...commands } as ReadonlyContext;
-  }
-
-  get mutableContext(): MutableContext {
-    const { globalState, entities, commands } = this;
-    return { global: globalState, ...createQuery(entities), ...commands } as MutableContext;
-  }
 }

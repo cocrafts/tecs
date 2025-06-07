@@ -43,8 +43,8 @@ export type ECSContext<
   Command extends { type: string },
   GlobalState extends object,
   M extends 'mutable' | 'readonly'
-> = Query<ComponentMap, M> &
-  Commands<Command> & {
+> =
+  Commands<Command> &Query<ComponentMap, M> & {
     global: M extends 'readonly' ? DeepReadonly<GlobalState> : GlobalState;
   };
 
@@ -69,7 +69,7 @@ export type CommandMap<ECSContext, Command extends { type: string }> = {
 };
 
 export type ActionMap<ECSContext, Action extends { type: string }> = {
-  [K in Action['type']]?: (ecs: ECSContext, action: Action) => void;
+  [K in Action['type']]?: ActionFn<ECSContext, Action, K>;
 };
 
 export type SystemMap<ECSContext, ComponentMap extends object> = Record<
