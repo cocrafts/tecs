@@ -52,8 +52,8 @@ export type LoopQuery<
   M extends 'mutable' | 'readonly',
   UsedKeys extends keyof CM = never,
   ExcludedKeys extends keyof CM = never,
-  QueriedEntity = Pick<Required<Entity<CM>>, UsedKeys> &
-    Omit<Entity<CM>, ExcludedKeys>
+  FilteredEntity = Pick<Required<Entity<CM>>, UsedKeys> & Omit<Entity<CM>, ExcludedKeys>,
+  ReturnedEntity = M extends 'readonly' ? Simplify<DeepReadonly<FilteredEntity>>: Simplify<FilteredEntity>
 > = {
   has: <K extends keyof CM>(
     key: K
@@ -61,9 +61,13 @@ export type LoopQuery<
   not: <K extends keyof CM>(
     key: K
   ) => LoopQuery<CM, M, UsedKeys, ExcludedKeys | K>;
-  query: () => M extends 'readonly'
-    ? Simplify<DeepReadonly<QueriedEntity>>[]
-    : Simplify<QueriedEntity>[];
+  valueOf: () => ReturnedEntity[];
+  get: () => ReturnedEntity[];
+  toString: () => string,
+  [Symbol.iterator](): Iterator<ReturnedEntity>
+  // @ts-expect-error allow access as array
+  [number]: ReturnedEntity
+  length: number
 };
 
 export const createQuery = <
@@ -74,11 +78,25 @@ export const createQuery = <
   ): Query<CM, M> => {
   const id = (id: number) => entities[id];
 
-  const query = (entities: Entity<CM>[]) => ({
+  const query = (entities: Entity<CM>[]) => proxifyQuery(entities, {
     has: (key: keyof CM) => query(entities.filter((e) => !!e[key])),
     not: (key: keyof CM) => query(entities.filter((e) => !e[key])),
-    query: () => entities,
+    valueOf: () => entities,
+    get: () => entities,
+    toString: () => entities.toString(),
+    [Symbol.iterator]: entities[Symbol.iterator],
   });
 
   return { ...query(entities), id } as Query<CM, M>;
 };
+
+const proxifyQuery = (entities: any[], query: any): any => new Proxy(query, {
+  get(target, prop, receiver) {
+    if (typeof prop === 'string') {
+      const index = Number(prop);
+      if (!Number.isNaN(index)) { return entities[index]; }
+      if (prop === 'length') { return entities.length; }
+    }
+    return Reflect.get(target, prop, receiver);
+  },
+});
