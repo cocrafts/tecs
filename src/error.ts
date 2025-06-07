@@ -10,4 +10,8 @@ export default class TECSError extends Error {
   static initialStateNotExist(state:unknown) {
     throw new TECSError(`[StateMachine] Initial '${state}' is not available in state map`);
   }
+
+  static accessImmutableData() {
+    throw new TECSError('Data is immutable in this context, it is only mutable in commands');
+  }
 }
