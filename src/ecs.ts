@@ -47,7 +47,7 @@ export default class ECS<
 
   private commandMap: CommandMap<MutableContext, Command> = {};
 
-  private commands: Commands<Command> = {};
+  private commands: Commands<Command> = {} as Commands<Command>;
 
   constructor(initialState: GlobalState) {
     this.globalState = proxify(structuredClone(initialState), {
@@ -87,16 +87,17 @@ export default class ECS<
     this.actionMap[type] = handle;
   }
 
-  public addCommand<T extends Command>(
-    type: T['type'],
-    execute: CommandFn<MutableContext, Command, T['type']>,
+  public addCommand<T extends Command['type']>(
+    type: T,
+    execute: CommandFn<MutableContext, Command, T>,
   ) {
     this.commandMap[type] = execute;
-    this.commands[type] = (data: Command & { type: T['type']; }) => {
+    this.commands[type] = (data: Omit<Command & { type: T; }, 'type'>) => {
+      const command = { ...data, type } as Command & {type: T};
       if (this.stateMachine.current === 'command_execution') {
-        this.pendingCommands.unshift(data);
+        this.pendingCommands.unshift(command);
       } else {
-        this.pendingCommands.push(data);
+        this.pendingCommands.push(command);
       }
     };
   }

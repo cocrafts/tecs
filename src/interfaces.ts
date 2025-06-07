@@ -49,7 +49,7 @@ export type ECSContext<
   };
 
 export type Commands<Command extends { type: string }> = {
-  [K in Command['type']]?: (data: Command & { type: K }) => void;
+  [K in Command['type']]: (data: Omit<Command & { type: K }, 'type'>) => void;
 };
 
 export type CommandFn<
