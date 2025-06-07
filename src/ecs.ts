@@ -107,7 +107,7 @@ export default class ECS<
     execute: CommandFn<MutableContext, Command, T>,
   ) {
     this.commandMap[type] = execute;
-    this.commands[type] = (data: Omit<Command & { type: T; }, 'type'>) => {
+    this.commands[type] = (data) => {
       const command = { ...data, type } as Command & {type: T};
       if (this.stateMachine.current === 'command_execution') {
         this.pendingCommands.unshift(command);

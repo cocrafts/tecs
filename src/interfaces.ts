@@ -1,6 +1,6 @@
 import type { Query, QueryPairs } from './query';
 import type { Event, StateMap } from './state-machine';
-import type { DeepReadonly } from './util-types';
+import type { DeepReadonly, Simplify } from './util-types';
 
 export const ECSStateMap = {
   initial: {
@@ -49,7 +49,7 @@ export type ECSContext<
   };
 
 export type Commands<Command extends { type: string }> = {
-  [K in Command['type']]: (data: Omit<Command & { type: K }, 'type'>) => void;
+  [K in Command['type']]: (data: Simplify<Omit<Extract<Command, { type: K }>, 'type'>>) => void;
 };
 
 export type CommandFn<
